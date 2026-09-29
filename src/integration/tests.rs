@@ -3201,6 +3201,7 @@ fn bundled_integration_asset_versions_match_expected_versions() {
             MASTRACODE_INTEGRATION_VERSION,
         ),
         ("grok", GROK_HOOK_ASSET, GROK_INTEGRATION_VERSION),
+        ("crush", CRUSH_HOOK_ASSET, CRUSH_INTEGRATION_VERSION),
     ] {
         assert_eq!(
             parse_integration_version(asset),
@@ -4754,5 +4755,195 @@ fn grok_dir_honors_grok_home_after_config_dir_seam() {
 
     std::env::remove_var(GROK_HOME_ENV_VAR);
     clear_integration_path_env();
+    let _ = fs::remove_dir_all(base);
+}
+
+fn crush_session_command(config: &Value) -> String {
+    config["hooks"]["PreToolUse"][0]["command"]
+        .as_str()
+        .expect("crush PreToolUse command")
+        .to_string()
+}
+
+#[test]
+fn install_crush_writes_hook_and_registers_flat_entry() {
+    let _lock = integration_env_lock();
+    let base = unique_base();
+    let crush_dir = base.join(".config").join("crush");
+    fs::create_dir_all(&crush_dir).unwrap();
+    let original = std::env::var_os(CRUSH_GLOBAL_CONFIG_ENV_VAR);
+    std::env::set_var(CRUSH_GLOBAL_CONFIG_ENV_VAR, crush_dir.join("crush.json"));
+
+    let installed = install_crush().unwrap();
+
+    assert_eq!(
+        installed.hook_path,
+        crush_dir.join("hooks").join(CRUSH_HOOK_INSTALL_NAME)
+    );
+    assert_eq!(
+        installed.config_path,
+        crush_dir.join(CRUSH_HOOK_CONFIG_NAME)
+    );
+    assert_eq!(
+        fs::read_to_string(&installed.hook_path).unwrap(),
+        CRUSH_HOOK_ASSET
+    );
+
+    let config: Value =
+        serde_json::from_str(&fs::read_to_string(&installed.config_path).unwrap()).unwrap();
+    let entries = config["hooks"]["PreToolUse"].as_array().unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0]["name"].as_str(), Some("herdr"));
+    assert_eq!(entries[0]["timeout"].as_u64(), Some(CRUSH_HOOK_TIMEOUT_SEC));
+    let command = crush_session_command(&config);
+    assert_eq!(command, hook_command(&installed.hook_path, Some("session")));
+
+    if let Some(value) = original {
+        std::env::set_var(CRUSH_GLOBAL_CONFIG_ENV_VAR, value);
+    } else {
+        std::env::remove_var(CRUSH_GLOBAL_CONFIG_ENV_VAR);
+    }
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn install_crush_preserves_unrelated_config_and_is_idempotent() {
+    let _lock = integration_env_lock();
+    let base = unique_base();
+    let crush_dir = base.join(".config").join("crush");
+    fs::create_dir_all(&crush_dir).unwrap();
+    let unrelated = json!({"lsp": {"rust": {"command": "rust-analyzer"}}});
+    fs::write(
+        crush_dir.join(CRUSH_HOOK_CONFIG_NAME),
+        serde_json::to_string_pretty(&unrelated).unwrap(),
+    )
+    .unwrap();
+    let original = std::env::var_os(CRUSH_GLOBAL_CONFIG_ENV_VAR);
+    std::env::set_var(
+        CRUSH_GLOBAL_CONFIG_ENV_VAR,
+        crush_dir.join(CRUSH_HOOK_CONFIG_NAME),
+    );
+
+    install_crush().unwrap();
+    install_crush().unwrap();
+
+    let config: Value = serde_json::from_str(
+        &fs::read_to_string(crush_dir.join(CRUSH_HOOK_CONFIG_NAME)).unwrap(),
+    )
+    .unwrap();
+    assert!(config.get("lsp").is_some(), "unrelated keys survive");
+    let entries = config["hooks"]["PreToolUse"].as_array().unwrap();
+    assert_eq!(entries.len(), 1, "reinstall must not duplicate the entry");
+
+    if let Some(value) = original {
+        std::env::set_var(CRUSH_GLOBAL_CONFIG_ENV_VAR, value);
+    } else {
+        std::env::remove_var(CRUSH_GLOBAL_CONFIG_ENV_VAR);
+    }
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn uninstall_crush_removes_entry_and_hook_but_keeps_other_config() {
+    let _lock = integration_env_lock();
+    let base = unique_base();
+    let crush_dir = base.join(".config").join("crush");
+    fs::create_dir_all(&crush_dir).unwrap();
+    let original = std::env::var_os(CRUSH_GLOBAL_CONFIG_ENV_VAR);
+    std::env::set_var(
+        CRUSH_GLOBAL_CONFIG_ENV_VAR,
+        crush_dir.join(CRUSH_HOOK_CONFIG_NAME),
+    );
+
+    let installed = install_crush().unwrap();
+    {
+        let mut config: Value =
+            serde_json::from_str(&fs::read_to_string(&installed.config_path).unwrap()).unwrap();
+        config["hooks"][CRUSH_HOOK_EVENT]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"name": "mine", "command": "echo keep-me", "timeout": 5}));
+        fs::write(
+            &installed.config_path,
+            serde_json::to_string_pretty(&config).unwrap(),
+        )
+        .unwrap();
+    }
+
+    let result = uninstall_crush().unwrap();
+
+    assert!(result.removed_hook_file);
+    assert!(result.updated_config);
+    assert!(!installed.hook_path.exists());
+    let config: Value =
+        serde_json::from_str(&fs::read_to_string(&installed.config_path).unwrap()).unwrap();
+    let entries = config["hooks"][CRUSH_HOOK_EVENT].as_array().unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0]["command"].as_str(), Some("echo keep-me"));
+
+    if let Some(value) = original {
+        std::env::set_var(CRUSH_GLOBAL_CONFIG_ENV_VAR, value);
+    } else {
+        std::env::remove_var(CRUSH_GLOBAL_CONFIG_ENV_VAR);
+    }
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn install_crush_requires_the_config_directory() {
+    let _lock = integration_env_lock();
+    let base = unique_base();
+    let original = std::env::var_os(CRUSH_GLOBAL_CONFIG_ENV_VAR);
+    std::env::set_var(
+        CRUSH_GLOBAL_CONFIG_ENV_VAR,
+        base.join("missing").join("crush.json"),
+    );
+
+    let error = install_crush().unwrap_err();
+    assert!(error.to_string().contains("install crush"));
+
+    if let Some(value) = original {
+        std::env::set_var(CRUSH_GLOBAL_CONFIG_ENV_VAR, value);
+    } else {
+        std::env::remove_var(CRUSH_GLOBAL_CONFIG_ENV_VAR);
+    }
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn crush_status_flags_a_current_hook_with_missing_registration_as_outdated() {
+    let _lock = integration_env_lock();
+    let base = unique_base();
+    let crush_dir = base.join(".config").join("crush");
+    fs::create_dir_all(&crush_dir).unwrap();
+    let original = std::env::var_os(CRUSH_GLOBAL_CONFIG_ENV_VAR);
+    std::env::set_var(
+        CRUSH_GLOBAL_CONFIG_ENV_VAR,
+        crush_dir.join(CRUSH_HOOK_CONFIG_NAME),
+    );
+
+    let installed = install_crush().unwrap();
+    fs::write(
+        &installed.config_path,
+        serde_json::to_string_pretty(&json!({"hooks": {}})).unwrap(),
+    )
+    .unwrap();
+
+    let statuses = installed_integration_statuses();
+    let crush = statuses
+        .iter()
+        .find(|status| status.target == crate::api::schema::IntegrationTarget::Crush)
+        .expect("crush integration status must be listed");
+    assert_eq!(
+        crush.state,
+        IntegrationStatusKind::Outdated,
+        "hook file present but registration removed must read outdated"
+    );
+
+    if let Some(value) = original {
+        std::env::set_var(CRUSH_GLOBAL_CONFIG_ENV_VAR, value);
+    } else {
+        std::env::remove_var(CRUSH_GLOBAL_CONFIG_ENV_VAR);
+    }
     let _ = fs::remove_dir_all(base);
 }

@@ -21,9 +21,10 @@ use super::config_edit::{
 };
 use super::config_file::{check_config_targets, write_config};
 use super::env::{
-    antigravity_cli_dir, claude_dir, codex_dir, copilot_dir, cursor_dir, devin_dir, droid_dir,
-    grok_dir, hermes_dir, hermes_plugin_dir, kilo_dir, kimi_dir, letta_dir, mastracode_dir,
-    omp_extension_dir, opencode_dir, opencode_state_dir, pi_extension_dir, qodercli_dir, qwen_dir,
+    antigravity_cli_dir, claude_dir, codex_dir, copilot_dir, crush_dir, cursor_dir, devin_dir,
+    droid_dir, grok_dir, hermes_dir, hermes_plugin_dir, kilo_dir, kimi_dir, letta_dir,
+    mastracode_dir, omp_extension_dir, opencode_dir, opencode_state_dir, pi_extension_dir,
+    qodercli_dir, qwen_dir,
 };
 use super::file_ops::{
     make_executable, remove_dir_all_if_exists, remove_file_if_exists, remove_legacy_bash_hook_file,
@@ -42,6 +43,7 @@ use super::types::{
     LettaUninstallResult, MastracodeInstallPaths, MastracodeUninstallResult, OmpInstallPaths,
     OmpUninstallResult, OpenCodeInstallPaths, OpenCodeUninstallResult, PiUninstallResult,
     QodercliInstallPaths, QodercliUninstallResult, QwenInstallPaths, QwenUninstallResult,
+    CrushInstallPaths, CrushUninstallResult,
 };
 use super::{
     ANTIGRAVITY_CLI_HOOK_ASSET, ANTIGRAVITY_CLI_HOOK_BLOCK_NAME, ANTIGRAVITY_CLI_HOOK_EVENTS,
@@ -1787,5 +1789,188 @@ pub(crate) fn uninstall_grok() -> io::Result<GrokUninstallResult> {
         config_path,
         removed_hook_file,
         removed_config_file,
+    })
+}
+
+pub(crate) fn crush_config_path(dir: &Path) -> PathBuf {
+    dir.join(super::CRUSH_HOOK_CONFIG_NAME)
+}
+
+/// True when the herdr-owned crush.json `PreToolUse` entry that registers
+/// `hook_path` is present. Crush keys its global hook table by event with
+/// flat `{name, matcher?, command, timeout}` entries, so herdr matches its
+/// own entries by the hook path appearing in `command` (stable across the
+/// sh/powershell command forms and earlier install locations).
+pub(crate) fn crush_hook_registered(config_path: &Path, hook_path: &Path) -> bool {
+    let Ok(content) = fs::read_to_string(config_path) else {
+        return false;
+    };
+    let Ok(parsed) = serde_json::from_str::<Value>(&content) else {
+        return false;
+    };
+    let Some(entries) = parsed
+        .get("hooks")
+        .and_then(|hooks| hooks.get(super::CRUSH_HOOK_EVENT))
+        .and_then(Value::as_array)
+    else {
+        return false;
+    };
+    let needle = hook_path.display().to_string();
+    entries.iter().any(|entry| {
+        entry
+            .get("command")
+            .and_then(Value::as_str)
+            .is_some_and(|command| command.contains(&needle))
+    })
+}
+
+fn ensure_crush_hook_entry(
+    hooks: &mut Map<String, Value>,
+    hook_path: &Path,
+    command: String,
+) {
+    let entries = hooks
+        .entry(super::CRUSH_HOOK_EVENT.to_string())
+        .or_insert_with(|| Value::Array(Vec::new()));
+    if !entries.is_array() {
+        // A non-array PreToolUse value is user data herdr must not clobber;
+        // install_crush validated the file as an object, and uninstall never
+        // touches foreign shapes either. Bail out without writing.
+        return;
+    }
+    let array = entries.as_array_mut().expect("checked array");
+    let needle = hook_path.display().to_string();
+    if array.iter().any(|entry| {
+        entry
+            .get("command")
+            .and_then(Value::as_str)
+            .is_some_and(|existing| existing.contains(&needle))
+    }) {
+        return;
+    }
+    array.push(json!({
+        "name": "herdr",
+        "command": command,
+        "timeout": super::CRUSH_HOOK_TIMEOUT_SEC,
+    }));
+}
+
+fn remove_crush_hook_entries(
+    hooks: &mut Map<String, Value>,
+    hook_path: &Path,
+) -> io::Result<bool> {
+    let Some(entries_value) = hooks.get_mut(super::CRUSH_HOOK_EVENT) else {
+        return Ok(false);
+    };
+    let entries = entries_value
+        .as_array_mut()
+        .ok_or_else(|| io::Error::other("crush.json hooks.PreToolUse must be an array"))?;
+    let needle = hook_path.display().to_string();
+    let before = entries.len();
+    entries.retain(|entry| {
+        !(entry
+            .get("command")
+            .and_then(Value::as_str)
+            .is_some_and(|command| command.contains(&needle)))
+    });
+    let removed = entries.len() != before;
+    if entries.is_empty() {
+        hooks.remove(super::CRUSH_HOOK_EVENT);
+    }
+    Ok(removed)
+}
+
+pub(crate) fn install_crush() -> io::Result<CrushInstallPaths> {
+    let dir = crush_dir()?;
+    if !dir.is_dir() {
+        return Err(io::Error::other(format!(
+            "crush config directory not found at {}. install crush and run it once first",
+            dir.display()
+        )));
+    }
+    check_config_targets(&dir, &[super::CRUSH_HOOK_CONFIG_NAME])?;
+
+    let hooks_dir = dir.join("hooks");
+    fs::create_dir_all(&hooks_dir)?;
+
+    let hook_path = hooks_dir.join(super::CRUSH_HOOK_INSTALL_NAME);
+    fs::write(&hook_path, super::CRUSH_HOOK_ASSET)?;
+    make_executable(&hook_path)?;
+
+    // herdr adds one flat PreToolUse entry to the user's crush.json and owns
+    // only its own entries; everything else in the file is left untouched.
+    let config_path = crush_config_path(&dir);
+    let mut config = if config_path.is_file() {
+        serde_json::from_str::<Value>(&fs::read_to_string(&config_path)?).map_err(|err| {
+            io::Error::other(format!(
+                "failed to parse {}: {err}",
+                config_path.display()
+            ))
+        })?
+    } else {
+        json!({})
+    };
+    if !config.is_object() {
+        return Err(io::Error::other(format!(
+            "{} must contain a JSON object",
+            config_path.display()
+        )));
+    }
+    let hooks = ensure_hooks_object(
+        &mut config,
+        &config_path,
+        "crush config file",
+        "crush config file hooks",
+    )?;
+    remove_crush_hook_entries(hooks, &hook_path)?;
+    ensure_crush_hook_entry(
+        hooks,
+        &hook_path,
+        hook_command(&hook_path, Some("session")),
+    );
+    write_config(&config_path, serde_json::to_string_pretty(&config)?)?;
+
+    Ok(CrushInstallPaths {
+        hook_path,
+        config_path,
+    })
+}
+
+pub(crate) fn uninstall_crush() -> io::Result<CrushUninstallResult> {
+    let dir = crush_dir()?;
+    let hook_path = dir
+        .join("hooks")
+        .join(super::CRUSH_HOOK_INSTALL_NAME);
+    let config_path = crush_config_path(&dir);
+
+    let removed_hook_file = remove_file_if_exists(&hook_path)?;
+
+    let mut updated_config = false;
+    if config_path.is_file() {
+        let mut config: Value = serde_json::from_str::<Value>(&fs::read_to_string(
+            &config_path,
+        )?)
+        .map_err(|err| {
+            io::Error::other(format!("failed to parse {}: {err}", config_path.display()))
+        })?;
+        if let Some(hooks) = config.get_mut("hooks").and_then(Value::as_object_mut) {
+            updated_config = remove_crush_hook_entries(hooks, &hook_path)?;
+            if hooks.is_empty() {
+                config
+                    .as_object_mut()
+                    .expect("config checked as object")
+                    .remove("hooks");
+            }
+            if updated_config {
+                write_config(&config_path, serde_json::to_string_pretty(&config)?)?;
+            }
+        }
+    }
+
+    Ok(CrushUninstallResult {
+        hook_path,
+        config_path,
+        removed_hook_file,
+        updated_config,
     })
 }

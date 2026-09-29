@@ -321,6 +321,22 @@ const GROK_HOOK_ASSET: &str = if cfg!(windows) {
 };
 const GROK_INTEGRATION_VERSION: u32 = 2;
 
+const CRUSH_HOOK_INSTALL_NAME: &str = if cfg!(windows) {
+    "herdr-agent-state.ps1"
+} else {
+    "herdr-agent-state.sh"
+};
+const CRUSH_HOOK_ASSET: &str = if cfg!(windows) {
+    include_str!("assets/crush/herdr-agent-state.ps1")
+} else {
+    include_str!("assets/crush/herdr-agent-state.sh")
+};
+const CRUSH_INTEGRATION_VERSION: u32 = 1;
+const CRUSH_HOOK_CONFIG_NAME: &str = "crush.json";
+const CRUSH_HOOK_EVENT: &str = "PreToolUse";
+const CRUSH_HOOK_TIMEOUT_SEC: u64 = 10;
+const CRUSH_MIN_VERSION: &str = "0.96.0";
+
 pub(crate) const INSTALL_WARNING_PREFIX: &str = "warning:";
 
 #[cfg(test)]

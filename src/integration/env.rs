@@ -24,6 +24,9 @@ pub(crate) const GROK_CONFIG_DIR_ENV_VAR: &str = "GROK_CONFIG_DIR";
 /// `$GROK_HOME/config.toml` and `$GROK_HOME/auth.json`).
 pub(crate) const GROK_HOME_ENV_VAR: &str = "GROK_HOME";
 pub(crate) const HERMES_HOME_ENV_VAR: &str = "HERMES_HOME";
+/// The crush CLI's global config file override; when set, it points at the
+/// config file itself (crushrc or crush.json), not the directory.
+pub(crate) const CRUSH_GLOBAL_CONFIG_ENV_VAR: &str = "CRUSH_GLOBAL_CONFIG";
 
 pub(crate) fn apply_pane_base_env(cmd: &mut CommandBuilder) {
     cmd.env(crate::api::SOCKET_PATH_ENV_VAR, crate::api::socket_path());
@@ -204,6 +207,23 @@ pub(crate) fn grok_dir() -> io::Result<PathBuf> {
     // The grok CLI honors GROK_HOME as its config home (config.toml,
     // auth.json, hooks/); mirror it so hook installs land where grok looks.
     config_dir_from_env_or_home(GROK_HOME_ENV_VAR, &[".grok"])
+}
+
+/// Directory holding crush's global config. Crush discovers
+/// `$XDG_CONFIG_HOME/crush/` (default `~/.config/crush/`); `CRUSH_GLOBAL_CONFIG`
+/// overrides the config file path, so its parent becomes the config directory.
+pub(crate) fn crush_dir() -> io::Result<PathBuf> {
+    if let Some(value) =
+        std::env::var_os(CRUSH_GLOBAL_CONFIG_ENV_VAR).filter(|value| !value.is_empty())
+    {
+        if let Some(parent) = expand_tilde_path(PathBuf::from(value))?.parent() {
+            return Ok(parent.to_path_buf());
+        }
+    }
+    if let Some(value) = std::env::var_os("XDG_CONFIG_HOME").filter(|value| !value.is_empty()) {
+        return expand_tilde_path(PathBuf::from(value)).map(|path| path.join("crush"));
+    }
+    Ok(home_dir()?.join(".config").join("crush"))
 }
 
 pub(crate) fn home_dir() -> io::Result<PathBuf> {
