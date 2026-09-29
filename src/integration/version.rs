@@ -17,6 +17,12 @@ pub(crate) fn agent_version_requirement(
             args: &["--version"],
             min_version: super::KIMI_MIN_VERSION,
         }),
+        crate::api::schema::IntegrationTarget::Crush => Some(AgentVersionRequirement {
+            label: "crush",
+            binary: "crush",
+            args: &["version"],
+            min_version: super::CRUSH_MIN_VERSION,
+        }),
         _ => None,
     }
 }
