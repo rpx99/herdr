@@ -1,0 +1,11 @@
+Herdr is a terminal workspace manager for AI coding agents: the agent
+terminals (Claude Code, Codex, opencode, Cursor, Grok and others) live
+inside a background server, so they keep working when you close the
+terminal or drop the network. Sessions and layout are restored after a
+restart, panes are marked working/blocked/idle, and additional machines
+can be attached over SSH.
+
+Native OpenBSD source build of github.com/herdrdev/herdr (Rust only,
+no bundled C libraries). State lives under ~/.local/share/herdr/ and
+~/.config/herdr/. The agent CLIs it runs are separate packages or
+installs; herdr does not bundle them.

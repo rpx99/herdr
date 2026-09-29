@@ -1,0 +1,4 @@
+@comment $OpenBSD$
+@owner root
+@group bin
+@bin bin/herdr
