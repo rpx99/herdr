@@ -15,6 +15,8 @@ fn zig_target(target: &str) -> &str {
         "aarch64-apple-ios-sim" => "aarch64-ios-simulator",
         "x86_64-pc-windows-msvc" => "x86_64-windows-msvc",
         "aarch64-pc-windows-msvc" => "aarch64-windows-msvc",
+        "x86_64-unknown-openbsd" => "x86_64-openbsd",
+        "aarch64-unknown-openbsd" => "aarch64-openbsd",
         other => panic!("unsupported target for libghostty-vt build: {other}"),
     }
 }
