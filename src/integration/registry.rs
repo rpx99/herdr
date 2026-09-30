@@ -8,24 +8,24 @@ pub(crate) fn integration_target_label(
     target: crate::api::schema::IntegrationTarget,
 ) -> &'static str {
     match target {
-        crate::api::schema::IntegrationTarget::Pi => "pi",
-        crate::api::schema::IntegrationTarget::Omp => "omp",
+        crate::api::schema::IntegrationTarget::AntigravityCli => "antigravity-cli",
         crate::api::schema::IntegrationTarget::Claude => "claude",
         crate::api::schema::IntegrationTarget::Codex => "codex",
         crate::api::schema::IntegrationTarget::Copilot => "copilot",
+        crate::api::schema::IntegrationTarget::Crush => "crush",
+        crate::api::schema::IntegrationTarget::Cursor => "cursor",
         crate::api::schema::IntegrationTarget::Devin => "devin",
         crate::api::schema::IntegrationTarget::Droid => "droid",
-        crate::api::schema::IntegrationTarget::Kimi => "kimi",
-        crate::api::schema::IntegrationTarget::Opencode => "opencode",
-        crate::api::schema::IntegrationTarget::Kilo => "kilo",
+        crate::api::schema::IntegrationTarget::Grok => "grok",
         crate::api::schema::IntegrationTarget::Hermes => "hermes",
+        crate::api::schema::IntegrationTarget::Kilo => "kilo",
+        crate::api::schema::IntegrationTarget::Kimi => "kimi",
+        crate::api::schema::IntegrationTarget::Mastracode => "mastracode",
+        crate::api::schema::IntegrationTarget::Omp => "omp",
+        crate::api::schema::IntegrationTarget::Opencode => "opencode",
+        crate::api::schema::IntegrationTarget::Pi => "pi",
         crate::api::schema::IntegrationTarget::Qodercli => "qodercli",
         crate::api::schema::IntegrationTarget::Qwen => "qwen",
-        crate::api::schema::IntegrationTarget::Cursor => "cursor",
-        crate::api::schema::IntegrationTarget::Mastracode => "mastracode",
-        crate::api::schema::IntegrationTarget::AntigravityCli => "antigravity-cli",
-        crate::api::schema::IntegrationTarget::Grok => "grok",
-        crate::api::schema::IntegrationTarget::Crush => "crush",
     }
 }
 
@@ -39,24 +39,24 @@ pub(crate) fn integration_target_command_names(
     target: crate::api::schema::IntegrationTarget,
 ) -> &'static [&'static str] {
     match target {
-        crate::api::schema::IntegrationTarget::Pi => &["pi"],
-        crate::api::schema::IntegrationTarget::Omp => &["omp"],
+        crate::api::schema::IntegrationTarget::AntigravityCli => &["agy"],
         crate::api::schema::IntegrationTarget::Claude => &["claude"],
         crate::api::schema::IntegrationTarget::Codex => &["codex"],
         crate::api::schema::IntegrationTarget::Copilot => &["copilot"],
+        crate::api::schema::IntegrationTarget::Crush => &["crush"],
         crate::api::schema::IntegrationTarget::Devin => &["devin"],
         crate::api::schema::IntegrationTarget::Droid => &["droid"],
-        crate::api::schema::IntegrationTarget::Kimi => &["kimi"],
-        crate::api::schema::IntegrationTarget::Opencode => &["opencode"],
-        crate::api::schema::IntegrationTarget::Kilo => &["kilo", "kilo-code"],
+        crate::api::schema::IntegrationTarget::Grok => &["grok"],
         crate::api::schema::IntegrationTarget::Hermes => &["hermes"],
+        crate::api::schema::IntegrationTarget::Kilo => &["kilo", "kilo-code"],
+        crate::api::schema::IntegrationTarget::Kimi => &["kimi"],
+        crate::api::schema::IntegrationTarget::Mastracode => &["mastracode"],
+        crate::api::schema::IntegrationTarget::Omp => &["omp"],
+        crate::api::schema::IntegrationTarget::Opencode => &["opencode"],
+        crate::api::schema::IntegrationTarget::Pi => &["pi"],
+        crate::api::schema::IntegrationTarget::Cursor => cursor_command_names(),
         crate::api::schema::IntegrationTarget::Qodercli => qodercli_command_names(),
         crate::api::schema::IntegrationTarget::Qwen => &["qwen"],
-        crate::api::schema::IntegrationTarget::Cursor => cursor_command_names(),
-        crate::api::schema::IntegrationTarget::Mastracode => &["mastracode"],
-        crate::api::schema::IntegrationTarget::AntigravityCli => &["agy"],
-        crate::api::schema::IntegrationTarget::Grok => &["grok"],
-        crate::api::schema::IntegrationTarget::Crush => &["crush"],
     }
 }
 
@@ -69,24 +69,24 @@ pub(crate) fn integration_target_supported(target: crate::api::schema::Integrati
     {
         matches!(
             target,
-            crate::api::schema::IntegrationTarget::Pi
-                | crate::api::schema::IntegrationTarget::Omp
+            crate::api::schema::IntegrationTarget::AntigravityCli
                 | crate::api::schema::IntegrationTarget::Claude
                 | crate::api::schema::IntegrationTarget::Codex
                 | crate::api::schema::IntegrationTarget::Copilot
-                | crate::api::schema::IntegrationTarget::Opencode
-                | crate::api::schema::IntegrationTarget::Kilo
+                | crate::api::schema::IntegrationTarget::Crush
+                | crate::api::schema::IntegrationTarget::Cursor
+                | crate::api::schema::IntegrationTarget::Devin
                 | crate::api::schema::IntegrationTarget::Droid
+                | crate::api::schema::IntegrationTarget::Grok
+                | crate::api::schema::IntegrationTarget::Hermes
+                | crate::api::schema::IntegrationTarget::Kilo
                 | crate::api::schema::IntegrationTarget::Kimi
+                | crate::api::schema::IntegrationTarget::Mastracode
+                | crate::api::schema::IntegrationTarget::Omp
+                | crate::api::schema::IntegrationTarget::Opencode
+                | crate::api::schema::IntegrationTarget::Pi
                 | crate::api::schema::IntegrationTarget::Qodercli
                 | crate::api::schema::IntegrationTarget::Qwen
-                | crate::api::schema::IntegrationTarget::AntigravityCli
-                | crate::api::schema::IntegrationTarget::Devin
-                | crate::api::schema::IntegrationTarget::Hermes
-                | crate::api::schema::IntegrationTarget::Cursor
-                | crate::api::schema::IntegrationTarget::Mastracode
-                | crate::api::schema::IntegrationTarget::Grok
-                | crate::api::schema::IntegrationTarget::Crush
         )
     }
 
@@ -273,14 +273,12 @@ fn integration_specs() -> [(
 ); 18] {
     [
         (
-            crate::api::schema::IntegrationTarget::Pi,
-            pi_extension_dir().map(|dir| dir.join(super::PI_EXTENSION_INSTALL_NAME)),
-            super::PI_INTEGRATION_VERSION,
-        ),
-        (
-            crate::api::schema::IntegrationTarget::Omp,
-            omp_extension_dir().map(|dir| dir.join(super::OMP_EXTENSION_INSTALL_NAME)),
-            super::OMP_INTEGRATION_VERSION,
+            crate::api::schema::IntegrationTarget::AntigravityCli,
+            antigravity_cli_dir().map(|dir| {
+                dir.join("hooks")
+                    .join(super::ANTIGRAVITY_CLI_HOOK_INSTALL_NAME)
+            }),
+            super::ANTIGRAVITY_CLI_INTEGRATION_VERSION,
         ),
         (
             crate::api::schema::IntegrationTarget::Claude,
@@ -298,6 +296,16 @@ fn integration_specs() -> [(
             super::COPILOT_INTEGRATION_VERSION,
         ),
         (
+            crate::api::schema::IntegrationTarget::Crush,
+            crush_dir().map(|dir| dir.join("hooks").join(super::CRUSH_HOOK_INSTALL_NAME)),
+            super::CRUSH_INTEGRATION_VERSION,
+        ),
+        (
+            crate::api::schema::IntegrationTarget::Cursor,
+            cursor_dir().map(|dir| dir.join(super::CURSOR_HOOK_INSTALL_NAME)),
+            super::CURSOR_INTEGRATION_VERSION,
+        ),
+        (
             crate::api::schema::IntegrationTarget::Devin,
             devin_dir().map(|dir| dir.join(super::DEVIN_HOOK_INSTALL_NAME)),
             super::DEVIN_INTEGRATION_VERSION,
@@ -308,9 +316,34 @@ fn integration_specs() -> [(
             super::DROID_INTEGRATION_VERSION,
         ),
         (
+            crate::api::schema::IntegrationTarget::Grok,
+            grok_dir().map(|dir| dir.join("hooks").join(super::GROK_HOOK_INSTALL_NAME)),
+            super::GROK_INTEGRATION_VERSION,
+        ),
+        (
+            crate::api::schema::IntegrationTarget::Hermes,
+            hermes_plugin_dir().map(|dir| dir.join(super::HERMES_PLUGIN_INIT_INSTALL_NAME)),
+            super::HERMES_INTEGRATION_VERSION,
+        ),
+        (
+            crate::api::schema::IntegrationTarget::Kilo,
+            kilo_dir().map(|dir| dir.join("plugin").join(super::KILO_PLUGIN_INSTALL_NAME)),
+            super::KILO_INTEGRATION_VERSION,
+        ),
+        (
             crate::api::schema::IntegrationTarget::Kimi,
             kimi_dir().map(|dir| dir.join("hooks").join(super::KIMI_HOOK_INSTALL_NAME)),
             super::KIMI_INTEGRATION_VERSION,
+        ),
+        (
+            crate::api::schema::IntegrationTarget::Mastracode,
+            mastracode_dir().map(|dir| dir.join("hooks").join(super::MASTRACODE_HOOK_INSTALL_NAME)),
+            super::MASTRACODE_INTEGRATION_VERSION,
+        ),
+        (
+            crate::api::schema::IntegrationTarget::Omp,
+            omp_extension_dir().map(|dir| dir.join(super::OMP_EXTENSION_INSTALL_NAME)),
+            super::OMP_INTEGRATION_VERSION,
         ),
         (
             crate::api::schema::IntegrationTarget::Opencode,
@@ -321,14 +354,9 @@ fn integration_specs() -> [(
             super::OPENCODE_INTEGRATION_VERSION,
         ),
         (
-            crate::api::schema::IntegrationTarget::Kilo,
-            kilo_dir().map(|dir| dir.join("plugin").join(super::KILO_PLUGIN_INSTALL_NAME)),
-            super::KILO_INTEGRATION_VERSION,
-        ),
-        (
-            crate::api::schema::IntegrationTarget::Hermes,
-            hermes_plugin_dir().map(|dir| dir.join(super::HERMES_PLUGIN_INIT_INSTALL_NAME)),
-            super::HERMES_INTEGRATION_VERSION,
+            crate::api::schema::IntegrationTarget::Pi,
+            pi_extension_dir().map(|dir| dir.join(super::PI_EXTENSION_INSTALL_NAME)),
+            super::PI_INTEGRATION_VERSION,
         ),
         (
             crate::api::schema::IntegrationTarget::Qodercli,
@@ -339,34 +367,6 @@ fn integration_specs() -> [(
             crate::api::schema::IntegrationTarget::Qwen,
             qwen_dir().map(|dir| dir.join("hooks").join(super::QWEN_HOOK_INSTALL_NAME)),
             super::QWEN_INTEGRATION_VERSION,
-        ),
-        (
-            crate::api::schema::IntegrationTarget::Cursor,
-            cursor_dir().map(|dir| dir.join(super::CURSOR_HOOK_INSTALL_NAME)),
-            super::CURSOR_INTEGRATION_VERSION,
-        ),
-        (
-            crate::api::schema::IntegrationTarget::Mastracode,
-            mastracode_dir().map(|dir| dir.join("hooks").join(super::MASTRACODE_HOOK_INSTALL_NAME)),
-            super::MASTRACODE_INTEGRATION_VERSION,
-        ),
-        (
-            crate::api::schema::IntegrationTarget::AntigravityCli,
-            antigravity_cli_dir().map(|dir| {
-                dir.join("hooks")
-                    .join(super::ANTIGRAVITY_CLI_HOOK_INSTALL_NAME)
-            }),
-            super::ANTIGRAVITY_CLI_INTEGRATION_VERSION,
-        ),
-        (
-            crate::api::schema::IntegrationTarget::Grok,
-            grok_dir().map(|dir| dir.join("hooks").join(super::GROK_HOOK_INSTALL_NAME)),
-            super::GROK_INTEGRATION_VERSION,
-        ),
-        (
-            crate::api::schema::IntegrationTarget::Crush,
-            crush_dir().map(|dir| dir.join("hooks").join(super::CRUSH_HOOK_INSTALL_NAME)),
-            super::CRUSH_INTEGRATION_VERSION,
         ),
     ]
 }
