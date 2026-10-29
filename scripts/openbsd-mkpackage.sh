@@ -6,7 +6,7 @@
 #
 # Aufruf bei einem neuen Release:
 #   ./scripts/openbsd-mkpackage.sh --check    # neuer Commit auf herdrdev/herdr?
-#   git fetch upstream && git rebase upstream/main   # Sync holen (nicht git pull)
+#   git fetch upstream && git rebase upstream/master   # Sync holen (nicht git pull)
 #   ./scripts/openbsd-mkpackage.sh            # nur bauen
 #   ./scripts/openbsd-mkpackage.sh -i         # bauen + installieren
 #   ./scripts/openbsd-mkpackage.sh -p         # bauen + committen + auf Fork pushen
@@ -38,7 +38,7 @@ Nur die optionale Installation mit pkg_add braucht doas.
 
 Optionen:
   -h, --help   diese Hilfe
-  --check      neuen Upstream-Sync pruefen (upstream/main, nicht der Fork)
+  --check      neuen Upstream-Sync pruefen (upstream/master, nicht der Fork)
   -i           nach dem Bau mit pkg_add installieren
   -p           nach dem Bau committen und auf den Fork pushen
   -ip, -pi     -i und -p zusammen
@@ -170,30 +170,30 @@ else
 fi
 
 if [ "$MODE" = check ]; then
-	# origin is the fork. New upstream syncs land on upstream/main.
+	# origin is the fork. New upstream syncs land on upstream/master.
 	if ! git -C "$REPO" remote get-url upstream >/dev/null 2>&1; then
 		git -C "$REPO" remote add upstream "$UPSTREAM_URL"
 	fi
-	git -C "$REPO" fetch upstream main >/dev/null 2>&1 \
+	git -C "$REPO" fetch upstream master >/dev/null 2>&1 \
 		|| { echo "FEHLER: git fetch upstream fehlgeschlagen (Netz?)"; exit 1; }
 	CARGO=Cargo.toml
 	LV=$(ver_of "$REPO/$CARGO")
-	RV=$(git -C "$REPO" show "upstream/main:$CARGO" \
+	RV=$(git -C "$REPO" show "upstream/master:$CARGO" \
 		| awk '/^version/ {gsub(/"/, "", $3); print $3; exit}')
 	HEAD_SHA=$(git -C "$REPO" rev-parse HEAD)
-	UP_SHA=$(git -C "$REPO" rev-parse upstream/main)
-	BASE_SHA=$(git -C "$REPO" merge-base HEAD upstream/main)
+	UP_SHA=$(git -C "$REPO" rev-parse upstream/master)
+	BASE_SHA=$(git -C "$REPO" merge-base HEAD upstream/master)
 	echo "lokal    : $LV ($(git -C "$REPO" rev-parse --short HEAD))"
-	echo "upstream : $RV ($(git -C "$REPO" rev-parse --short upstream/main))"
-	O=$(git -C "$REPO" rev-parse --short origin/main 2>/dev/null || true)
+	echo "upstream : $RV ($(git -C "$REPO" rev-parse --short upstream/master))"
+	O=$(git -C "$REPO" rev-parse --short origin/master 2>/dev/null || true)
 	if [ -n "$O" ]; then
 		echo "Fork     : $O (origin, nicht die Sync-Quelle)"
 	fi
 	if [ "$UP_SHA" = "$BASE_SHA" ]; then
-		echo "==> kein neuer Upstream-Sync: upstream/main steckt bereits in HEAD."
+		echo "==> kein neuer Upstream-Sync: upstream/master steckt bereits in HEAD."
 	else
 		N=$(git -C "$REPO" rev-list --count "$BASE_SHA".."$UP_SHA")
-		echo "==> $N neuer Upstream-Commit(s) auf upstream/main (nicht in HEAD):"
+		echo "==> $N neuer Upstream-Commit(s) auf upstream/master (nicht in HEAD):"
 		git -C "$REPO" --no-pager log --oneline -15 "$BASE_SHA".."$UP_SHA"
 		if [ "$N" -gt 15 ]; then
 			echo "    ... ($N insgesamt)"
@@ -204,7 +204,7 @@ if [ "$MODE" = check ]; then
 			echo "==> Cargo-Version $LV -> $RV"
 		fi
 		echo "Dann (nicht git pull — origin ist der Fork):"
-		echo "    git fetch upstream && git rebase upstream/main"
+		echo "    git fetch upstream && git rebase upstream/master"
 		echo "    $0"
 	fi
 	exit 0
@@ -267,6 +267,14 @@ fi
 if [ ! -f "$PORTDIR/Makefile" ]; then
 	echo "FEHLER: $PORTDIR/Makefile fehlt (sollte eingecheckt sein)"; exit 1
 fi
+
+# Keep the ports identity aligned with the selected source version.
+awk -v v="$V" -v r="$PKG_REVISION" '
+    /^V[[:space:]]*=/ { print "V =\t\t" v; if (r != "") print "REVISION =\t" r; next }
+    /^REVISION[[:space:]]*=/ { next }
+    { print }
+' "$PORTDIR/Makefile" >"$PORTDIR/Makefile.tmp"
+mv "$PORTDIR/Makefile.tmp" "$PORTDIR/Makefile"
 
 : >"$PORTDIR/crates.inc"
 # distinfo ebenfalls wegwerfen: es referenziert die alten Cargo-Eintraege,
@@ -390,7 +398,7 @@ if [ "$PUSH_AFTER" = 1 ]; then
 		echo "==> Keine Aenderungen zu committen."
 	fi
 	echo "==> Push auf $FORK_URL ..."
-	if ! git push origin main; then
+	if ! git push origin "$(git branch --show-current)"; then
 		echo "HINWEIS: Push fehlgeschlagen. Fork anlegen und als origin konfigurieren:" >&2
 		echo "  git remote set-url origin <URL-DES-EIGENEN-FORKS>" >&2
 	fi

@@ -1,5 +1,5 @@
 COMMENT =	terminal workspace manager for AI coding agents
-V =		0.9.3
+V =		0.9.5
 DISTNAME =	herdr-${V}
 DISTFILES =	${DISTNAME}${EXTRACT_SUFX}
 PKGNAME =	herdr-${V}
